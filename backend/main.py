@@ -7,9 +7,23 @@ from typing import List, Dict, Any
 from datetime import datetime, timedelta
 import copy
 from sklearn.model_selection import train_test_split
-from xgboost import XGBRegressor
+from sklearn.linear_model import ElasticNet
 import warnings
 import haversine as hs
+import os
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+load_dotenv()  # Load environment variables from .env file
+url: str = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_KEY")
+
+# Initialize Supabase client
+try:
+    supabase: Client = create_client(url, key)
+except Exception as e:
+    print(f"❌ CRITICAL ERROR: Failed to initialize Supabase client: {e}")
+    supabase = None
 
 warnings.filterwarnings('ignore')
 
@@ -17,7 +31,7 @@ warnings.filterwarnings('ignore')
 app = FastAPI(
     title="Smart Bus Management System API",
     description="API for real-time bus tracking, scheduling, and on-demand model retraining.",
-    version="1.4.1"  # Updated to reflect feature alignment fix
+    version="1.4.2"  # Updated to reflect Supabase fix and ElasticNet
 )
 
 # --- 🌐 CORS Middleware ---
@@ -65,7 +79,7 @@ class BusUpdate(BaseModel):
 # --- 🤖 Integrated Model Training Logic ---
 def train_demand_prediction_model():
     """
-    Loads data, aggregates to route-level demand, engineers features, trains an XGBoost model,
+    Loads data, aggregates to route-level demand, engineers features, trains an ElasticNet model,
     saves it, and reloads it into the app state.
     """
     print("\n--- 🤖 Starting Background Model Training Process ---")
@@ -111,12 +125,10 @@ def train_demand_prediction_model():
     y = df[target]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    model = XGBRegressor(
-        n_estimators=100,
-        learning_rate=0.1,
-        max_depth=5,
-        random_state=42,
-        objective='reg:squarederror'
+    model = ElasticNet(
+        alpha=1.0,
+        l1_ratio=0.5,
+        random_state=42
     )
     model.fit(X_train, y_train)
 
@@ -125,7 +137,7 @@ def train_demand_prediction_model():
 
     app_state["prediction_model"] = model
     generate_optimized_schedule()
-    print("--- 🔄 XGBoost model trained, saved, and schedule optimized. ---")
+    print("--- 🔄 ElasticNet model trained, saved, and schedule optimized. ---")
 
 @app.on_event("startup")
 def load_data_and_initialize_schedules():
@@ -140,6 +152,35 @@ def load_data_and_initialize_schedules():
     except Exception as e:
         print(f"❌ CRITICAL ERROR: Failed to load data: {e}")
         return
+
+    # Check and create public.users table if it doesn't exist
+    if supabase:
+        try:
+            # Check if users table exists
+            response = supabase.table('users').select('id').limit(1).execute()
+        except Exception as e:
+            if 'PGRST205' in str(e):
+                print("❌ public.users table not found. Creating it...")
+                try:
+                    supabase.rpc('execute_sql', {
+                        'query': """
+                        CREATE TABLE IF NOT EXISTS public.users (
+                            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                            email TEXT UNIQUE NOT NULL,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+                        );
+                        ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+                        CREATE POLICY "Users can view own profile" ON public.users
+                            FOR SELECT USING (auth.uid() = id);
+                        GRANT ALL ON public.users TO authenticated;
+                        GRANT SELECT ON public.users TO anon;
+                        """
+                    }).execute()
+                    print("✅ Created public.users table with RLS.")
+                except Exception as e:
+                    print(f"❌ Failed to create public.users table: {e}")
+            else:
+                print(f"❌ Supabase query error: {e}")
 
     required_stop_cols = ['stop_id', 'stop_name', 'latitude', 'longitude']
     if not all(col in stops_df.columns for col in required_stop_cols):
