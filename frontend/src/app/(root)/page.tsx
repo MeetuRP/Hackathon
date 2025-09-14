@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { RouteTable } from "./data-table";
 import { toast } from "sonner";
+import { TypewriterEffect } from "@/components/ui/typewriter-effect";
+import { Header } from "@/components/ui/header";
 
 export default function Home() {
   // get
@@ -30,6 +32,7 @@ export default function Home() {
 
   return (
     <div className="w-[70dvw] h-full flex flex-col items-center justify-center gap-3">
+      <Header />
       <RouteTable data={data} />
     </div>
   );

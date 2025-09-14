@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/ui/AppSidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { BackgroundBeamsWithCollision } from "@/components/ui/background-beams-with-collision";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,11 +37,13 @@ export default function RootLayout({
       >
         <SidebarProvider>
           <AppSidebar />
-          <main>
-            <SidebarTrigger />
-            {children}
-            <Toaster position="bottom-right" />
-          </main>
+          <BackgroundBeamsWithCollision>
+            <main>
+              <SidebarTrigger />
+              {children}
+              <Toaster position="bottom-right" />
+            </main>
+          </BackgroundBeamsWithCollision>
         </SidebarProvider>
       </body>
     </html>

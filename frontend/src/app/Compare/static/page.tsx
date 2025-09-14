@@ -48,7 +48,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="w-[70dvw] h-full flex flex-col items-center justify-center gap-3">
+    <div className="w-[70dvw] h-full mt-[-60vh] flex flex-col items-center justify-center gap-3">
       <TripTable data={data} />
     </div>
   );

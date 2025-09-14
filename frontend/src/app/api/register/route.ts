@@ -6,8 +6,9 @@ export async function POST(request: NextRequest) {
   const { username, email, password } = body;
   // Perform register logic here
   // call to backend API for authentication
+  console.log(`${process.env.NEXT_PUBLIC_BACKEND_URL}register`);
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/register`,
+    `${process.env.NEXT_PUBLIC_BACKEND_URL}register`,
     {
       method: "POST",
       headers: {
@@ -23,14 +24,8 @@ export async function POST(request: NextRequest) {
       { status: response.status }
     );
   }
-  // On successful register, we need to store user information
-  data.token &&
-    NextResponse.next().cookies.set("token", data.token, {
-      httpOnly: true,
-      secure: true,
-      path: "/",
-    });
-  return NextResponse.json({ success: true, message: "register successful" });
+
+  return NextResponse.json({ success: data.success, message: data.message });
 }
 
 export async function GET(request: NextRequest) {
