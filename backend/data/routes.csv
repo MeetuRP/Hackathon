@@ -1,3 +1,3 @@
-route_id,route_name,stops
-1,East Corridor,1;2;3;4;5
-2,West Corridor,6;7;8;9;10
+route_id,route_name,stops,active_bus,inactive_bus
+1,East Corridor,1;2;3;4;5,1,0
+2,West Corridor,6;7;8;9;10,1,0
