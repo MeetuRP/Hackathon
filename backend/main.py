@@ -2,7 +2,6 @@ import pandas as pd
 import joblib
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 import copy
@@ -12,7 +11,11 @@ import warnings
 import haversine as hs
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel, EmailStr
 from supabase import create_client, Client
+import bcrypt
+import os
+from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from .env file
 url: str = os.getenv("SUPABASE_URL")
@@ -393,6 +396,65 @@ def live_update(update: BusUpdate):
 def retrain_model(background_tasks: BackgroundTasks):
     background_tasks.add_task(train_demand_prediction_model)
     return {"message": "Model retraining started in the background. Check server logs for progress."}
+
+
+
+# Load env
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+app = FastAPI()
+
+# Models
+class RegisterRequest(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+# Register endpoint
+@app.post("/register")
+def register(req: RegisterRequest):
+    # Check if user already exists
+    existing = supabase.table("users").select("*").eq("email", req.email).execute()
+    if existing.data:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Hash password
+    hashed_pw = bcrypt.hashpw(req.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+    # Insert user
+    user = {
+        "username": req.username,
+        "email": req.email,
+        "password": hashed_pw
+    }
+    supabase.table("users").insert(user).execute()
+
+    return {"success": True, "message": "User registered successfully"}
+
+# Login endpoint
+@app.post("/login")
+def login(req: LoginRequest):
+    # Get user by email
+    res = supabase.table("users").select("*").eq("email", req.email).execute()
+    if not res.data:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    user = res.data[0]
+    stored_pw = user["password"]
+
+    # Verify password
+    if not bcrypt.checkpw(req.password.encode("utf-8"), stored_pw.encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    return {"success": True, "message": "Login successful", "user": {"id": user["id"], "username": user["username"], "email": user["email"]}}
 
 if __name__ == "__main__":
     import uvicorn
