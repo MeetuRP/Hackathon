@@ -12,3 +12,9 @@ passlib[bcrypt]
 supabase
 python-dotenv
 haversine
+
+
+pydantic[email]
+python-multipart
+
+gotrue
