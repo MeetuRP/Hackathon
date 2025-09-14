@@ -47,17 +47,17 @@ Export to Sheets
 
 The system is designed with a clear separation between the backend logic and the frontend presentation layer.
 
-\+-------------------------+      \+--------------------------+  
++-------------------------+      +--------------------------+  
 |      Next.js Frontend   |      |      FastAPI Backend     |  
 | (Dashboard, Map, Charts)|      | (Python, ML Model, Logic)|  
-\+-------------------------+      \+--------------------------+  
++-------------------------+      +--------------------------+  
            ^                                  ^  
            | REST API Calls (HTTP)            |  
            |                                  |  
-\+----------v----------------------------------v----------+  
++----------v----------------------------------v----------+  
 |              Data Layer (CSV Files / Database)        |  
 |  (historical.csv, routes.csv, stops.csv)              |  
-\+-------------------------------------------------------+
++-------------------------------------------------------+
 
 1. The **Frontend** (Next.js) provides the user interface for transit authorities.  
 2. It communicates with the **Backend** (FastAPI) via a REST API to fetch schedules, predictions, and live updates.  
